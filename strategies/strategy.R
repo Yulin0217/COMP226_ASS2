@@ -52,9 +52,7 @@ checkE01 <- function(prices, lookbacks) {
   # Return FALSE if lookbacks contains named elements short, medium, and long
   # otherwise return TRUE to indicate an error
 
-  if ("short" %in% names(lookbacks) &&
-    "medium" %in% names(lookbacks) &&
-    "long" %in% names(lookbacks)) {
+  if (all(c("short", "medium", "long") %in% names(lookbacks))) {
     return(FALSE)
   } else {
     return(TRUE)
@@ -97,7 +95,7 @@ checkE04 <- function(prices, lookbacks) {
 checkE05 <- function(prices, lookbacks) {
   # Return FALSE if prices has enough rows to getTMA otherwise return TRUE
   # to indicate an error
-  # Using unlist() function converts the list to a vector.
+  # Us  ing unlist() function converts the list to a vector.
   if (nrow(prices) >= max(unlist(lookbacks))) {
     return(FALSE)
   } else {
@@ -142,9 +140,15 @@ getTMA <- function(prices, lookbacks, with_checks = FALSE) {
     if (atLeastOneError(close_prices, lookbacks))
       stop('At least one of the errors E01...E06 occured')
 
+  # Calculate moving averages using close price
+  MA_short <- SMA(prices[, "Close"], n = lookbacks$short)
+  MA_medium <- SMA(prices[, "Close"], n = lookbacks$medium)
+  MA_long <- SMA(prices[, "Close"], n = lookbacks$long)
 
-  ret <- 0
-
+  # Get the last row of the MA
+  last_MA_short <- as.numeric(tail(MA_short, 1))
+  last_MA_medium <- as.numeric(tail(MA_medium, 1))
+  last_MA_long <- as.numeric(tail(MA_long, 1))
   # You need to replace the assignment to ret so that the returned object:
   #    - is a list
   #    - has the right names (short, medium, long), and
@@ -152,7 +156,7 @@ getTMA <- function(prices, lookbacks, with_checks = FALSE) {
   #    - and contains the correct moving average values, which should
   #      have windows of the correct sizes that all end in the
   #      same period, be the last row of prices
-
+  ret <- list(short = last_MA_short, medium = last_MA_medium, long = last_MA_long)
   return(ret)
 }
 
@@ -169,13 +173,20 @@ getPosSignFromTMA <- function(tma_list) {
   #       -1 if the short SMA < medium SMA < long SMA
   #        1 if the short SMA > medium SMA > long SMA
   #        0 otherwise
+  if (tma_list$short < tma_list$medium && tma_list$medium < tma_list$long) {
+    return(-1)
+  } else if (tma_list$short > tma_list$medium && tma_list$medium > tma_list$long) {
+    return(1)
+  } else {
+    return(0)
+  }
   return(0)
 }
 
 getPosSize <- function(current_close, constant = 5000) {
   # This function should return (constant divided by current_close)
   # rounded down to the nearest integer
-  return(0)
+  return(floor(constant / current_close))
 }
 
 ###############################################################################
