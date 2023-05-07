@@ -22,18 +22,17 @@ getOrders <- function(store, newRowList, currentPos, info, params) {
   # for the long moving average
   ###########################################################################
   if (store$iter > params$lookbacks$long) {
-    # ENTER STRATEGY LOGIC HERE
-
-    # remember to only consider the series in params$series
-
-    # You will need to get the current_close
-    # either from newRowList or from store$cl
-
-    # You will also need to get prices
-    # from store$cl
-
-    # With these you can use getTMA, getPosSignFromTMA
-    # and getPosSize to assign positions to the vector pos
+    #Only consider price in serise
+    for (serie in params$series) {
+      # Make sure current_close is numeric
+      current_close <- as.numeric(newRowList[[serie]]$Close)
+      # Make sure prices is an xts object!!
+      prices <- as.xts(store$cl[[serie]])
+      tma <- getTMA(prices, params$lookbacks)
+      pos_sign <- getPosSignFromTMA(list(short = tma$short, medium = tma$medium, long = tma$long))
+      pos_size <- getPosSize(current_close)
+      pos[serie] <- pos_sign * pos_size
+    }
   }
   ###########################################################################
 
@@ -49,9 +48,6 @@ getOrders <- function(store, newRowList, currentPos, info, params) {
 
 ###############################################################################
 checkE01 <- function(prices, lookbacks) {
-  # Return FALSE if lookbacks contains named elements short, medium, and long
-  # otherwise return TRUE to indicate an error
-
   if (all(c("short", "medium", "long") %in% names(lookbacks))) {
     return(FALSE)
   } else {
@@ -60,9 +56,6 @@ checkE01 <- function(prices, lookbacks) {
 }
 
 checkE02 <- function(prices, lookbacks) {
-  # Return FALSE if all the elements of lookbacks are integers (as in the R
-  # data type) otherwise return TRUE to indicate an error
-
   if (all(sapply(lookbacks, is.integer))) {
     return(FALSE)
   } else {
@@ -71,9 +64,6 @@ checkE02 <- function(prices, lookbacks) {
 }
 
 checkE03 <- function(prices, lookbacks) {
-  # Return FALSE if lookbacks$short < lookbacks$medium < lookbacks$long
-  # otherwise return TRUE to indicate an error
-
   if (lookbacks$short < lookbacks$medium & lookbacks$medium < lookbacks$long) {
     return(FALSE)
   } else {
@@ -82,9 +72,6 @@ checkE03 <- function(prices, lookbacks) {
 }
 
 checkE04 <- function(prices, lookbacks) {
-  # Return FALSE if prices is an xts object, otherwise return TRUE to
-  # indicate an error
-
   if ("xts" %in% class(prices)) {
     return(FALSE)
   } else {
@@ -93,9 +80,7 @@ checkE04 <- function(prices, lookbacks) {
 }
 
 checkE05 <- function(prices, lookbacks) {
-  # Return FALSE if prices has enough rows to getTMA otherwise return TRUE
-  # to indicate an error
-  # Us  ing unlist() function converts the list to a vector.
+  # Using unlist() function converts the list to a vector.
   if (nrow(prices) >= max(unlist(lookbacks))) {
     return(FALSE)
   } else {
@@ -104,9 +89,6 @@ checkE05 <- function(prices, lookbacks) {
 }
 
 checkE06 <- function(prices, lookbacks) {
-  # Return FALSE if prices contains a column called "Close" otherwise return
-  # TRUE to indicate an error
-
   if ("Close" %in% colnames(prices)) {
     return(FALSE)
   } else {
@@ -141,38 +123,19 @@ getTMA <- function(prices, lookbacks, with_checks = FALSE) {
       stop('At least one of the errors E01...E06 occured')
 
   # Calculate moving averages using close price
-  MA_short <- SMA(prices[, "Close"], n = lookbacks$short)
-  MA_medium <- SMA(prices[, "Close"], n = lookbacks$medium)
-  MA_long <- SMA(prices[, "Close"], n = lookbacks$long)
+  MA_short <- SMA(prices$Close, n = lookbacks$short)
+  MA_medium <- SMA(prices$Close, n = lookbacks$medium)
+  MA_long <- SMA(prices$Close, n = lookbacks$long)
 
   # Get the last row of the MA
   last_MA_short <- as.numeric(tail(MA_short, 1))
   last_MA_medium <- as.numeric(tail(MA_medium, 1))
   last_MA_long <- as.numeric(tail(MA_long, 1))
-  # You need to replace the assignment to ret so that the returned object:
-  #    - is a list
-  #    - has the right names (short, medium, long), and
-  #    - contains numeric and not xts objects
-  #    - and contains the correct moving average values, which should
-  #      have windows of the correct sizes that all end in the
-  #      same period, be the last row of prices
   ret <- list(short = last_MA_short, medium = last_MA_medium, long = last_MA_long)
   return(ret)
 }
 
 getPosSignFromTMA <- function(tma_list) {
-  # This function takes a list of numbers tma_list with three elements
-  # called short, medium, and long, which correspond to the SMA values for
-  # a short, medium and long lookback, respectively.
-
-  # Note that if both this function and getTMA are correctly implemented
-  # then the following should work with correct input arguments:
-  # getPositionFromTMA(getTMA(prices,lookbacks))
-
-  # This function should return a single number that is:
-  #       -1 if the short SMA < medium SMA < long SMA
-  #        1 if the short SMA > medium SMA > long SMA
-  #        0 otherwise
   if (tma_list$short < tma_list$medium && tma_list$medium < tma_list$long) {
     return(-1)
   } else if (tma_list$short > tma_list$medium && tma_list$medium > tma_list$long) {
@@ -184,8 +147,6 @@ getPosSignFromTMA <- function(tma_list) {
 }
 
 getPosSize <- function(current_close, constant = 5000) {
-  # This function should return (constant divided by current_close)
-  # rounded down to the nearest integer
   return(floor(constant / current_close))
 }
 
@@ -211,3 +172,7 @@ updateStore <- function(store, newRowList) {
   store$cl <- updateClStore(store$cl, newRowList)
   return(store)
 }
+
+
+#print(store$cl[params$series]$Close)
+#print(newRowlist)

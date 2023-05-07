@@ -38,3 +38,4 @@ test_pass_all_checks <- function(check_func)
 
 test_getTMA <- function() # same inputs as test_pass_all_checks()
   getTMA(prices_20_rows, lookbacks)
+
