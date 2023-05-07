@@ -112,7 +112,6 @@ atLeastOneError <- function(prices, lookbacks) {
 }
 
 ###############################################################################
-
 getTMA <- function(prices, lookbacks, with_checks = FALSE) {
 
   # prices and lookbacks should pass (return FALSE) when used with
